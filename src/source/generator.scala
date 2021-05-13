@@ -86,7 +86,9 @@ package object generatorTools {
                    skipGeneration: Boolean,
                    yamlOutFolder: Option[File],
                    yamlOutFile: Option[String],
-                   yamlPrefix: String)
+                   yamlPrefix: String,
+                   embindOutFolder: Option[File],
+                   embindOverrideHeader: Option[String])
 
   def preComma(s: String) = {
     if (s.isEmpty) s else ", " + s
@@ -231,6 +233,12 @@ package object generatorTools {
           createFolder("YAML", spec.yamlOutFolder.get)
         }
         new YamlGenerator(spec).generate(idl)
+      }
+      if (spec.embindOutFolder.isDefined) {
+        if (!spec.skipGeneration) {
+          createFolder("embind", spec.embindOutFolder.get)
+        }
+        new EmbindGenerator(spec).generate(idl)
       }
       None
     }

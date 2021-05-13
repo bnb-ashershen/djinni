@@ -86,6 +86,8 @@ object Main {
     var yamlOutFolder: Option[File] = None
     var yamlOutFile: Option[String] = None
     var yamlPrefix: String = ""
+    var embindOutFolder: Option[File] = None
+    var embindOverrideHeader: Option[String] = None
 
     val argParser = new scopt.OptionParser[Unit]("djinni") {
 
@@ -215,6 +217,10 @@ object Main {
         .text("Optional file in which to write the list of output files produced.")
       opt[Boolean]("skip-generation").valueName("<true/false>").foreach(x => skipGeneration = x)
         .text("Way of specifying if file generation should be skipped (default: false)")
+      opt[File]("embind-out").valueName("<out-folder>").foreach(x => embindOutFolder = Some(x))
+        .text("The folder for the embind C++ output files (Generator disabled if unspecified).")
+      opt[String]("embind-override-header").valueName("<header>").foreach(x => embindOverrideHeader = Some(x))
+        .text("The header which defines optional overrides for embind class methods")
 
       note("\nIdentifier styles (ex: \"FooBar\", \"fooBar\", \"foo_bar\", \"FOO_BAR\", \"m_fooBar\")\n")
       identStyle("ident-java-enum",      c => { javaIdentStyle = javaIdentStyle.copy(enum = c) })
@@ -367,7 +373,9 @@ object Main {
       skipGeneration,
       yamlOutFolder,
       yamlOutFile,
-      yamlPrefix)
+      yamlPrefix,
+      embindOutFolder,
+      embindOverrideHeader)
 
 
     try {
