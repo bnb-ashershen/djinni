@@ -88,6 +88,14 @@ object Main {
     var yamlPrefix: String = ""
     var embindOutFolder: Option[File] = None
     var embindOverrideHeader: Option[String] = None
+    var pyOutFolder: Option[File] = None
+    var pyPackageName: String = ""
+    var pyIdentStyle = IdentStyle.pythonDefault
+    var cWrapperOutFolder: Option[File] = None
+    var pycffiPackageName: String = ""
+    var pycffiDynamicLibList: String = ""
+    var pycffiOutFolder: Option[File] = None
+    var pyImportPrefix: String = ""
 
     val argParser = new scopt.OptionParser[Unit]("djinni") {
 
@@ -221,6 +229,18 @@ object Main {
         .text("The folder for the embind C++ output files (Generator disabled if unspecified).")
       opt[String]("embind-override-header").valueName("<header>").foreach(x => embindOverrideHeader = Some(x))
         .text("The header which defines optional overrides for embind class methods")
+      opt[File]("py-out").valueName("<out-folder>").foreach(x => pyOutFolder = Some(x))
+        .text("The output folder for Python files (Generator disabled if unspecified).")
+      opt[File]("pycffi-out").valueName("<out-folder>").foreach(x => pycffiOutFolder = Some(x))
+        .text("The output folder for PyCFFI files (Generator disabled if unspecified).")
+      opt[String]("pycffi-package-name").valueName("...").foreach(x => pycffiPackageName= x)
+        .text("The package name to use for the generated PyCFFI classes.")
+      opt[String]("pycffi-dynamic-lib-list").valueName("...").foreach(x => pycffiDynamicLibList= x)
+        .text("The names of the dynamic libraries to be linked with PyCFFI.")
+      opt[File]("c-wrapper-out").valueName("<out-folder>").foreach(x => cWrapperOutFolder = Some(x))
+        .text("The output folder for Wrapper C files (Generator disabled if unspecified).")
+      opt[String]("py-import-prefix").valueName("<import-prefix>").foreach(pyImportPrefix = _)
+        .text("The import prefix used within python genereated files (default: \"\")")
 
       note("\nIdentifier styles (ex: \"FooBar\", \"fooBar\", \"foo_bar\", \"FOO_BAR\", \"m_fooBar\")\n")
       identStyle("ident-java-enum",      c => { javaIdentStyle = javaIdentStyle.copy(enum = c) })
@@ -288,6 +308,7 @@ object Main {
         inFileListWriter.get.close()
       }
     }
+    val idlFileName = idlFile.getName
 
     // Resolve names in IDL file, check types.
     System.out.println("Resolving...")
@@ -375,12 +396,23 @@ object Main {
       yamlOutFile,
       yamlPrefix,
       embindOutFolder,
-      embindOverrideHeader)
-
+      embindOverrideHeader,
+      pyOutFolder,
+      pyPackageName,
+      pyIdentStyle,
+      pycffiOutFolder,
+      pycffiPackageName,
+      pycffiDynamicLibList,
+      idlFileName,
+      cWrapperOutFolder,
+      pyImportPrefix)
 
     try {
       val r = generate(idl, outSpec)
-      r.foreach(e => System.err.println("Error generating output: " + e))
+      r.foreach(e => {
+        System.err.println("Error generating output: " + e)
+        System.exit(1)
+      })
     }
     finally {
       if (outFileListWriter.isDefined) {

@@ -55,5 +55,30 @@
         ],
       },
     },
+    {
+      "target_name": "djinni_cwrapper",
+      "type": "static_library",
+      "sources": [
+        "cwrapper/djinni_common.hpp",
+        "cwrapper/thread_local.cpp",
+        "cwrapper/thread_local.hpp",
+        "cwrapper/wrapper_marshal.cpp",
+        "cwrapper/wrapper_marshal.hpp",
+        "cwrapper/wrapper_marshal.h",
+      ],
+      "include_dirs": [
+        "cwrapper",
+      ],
+      "direct_dependent_settings": {
+        "include_dirs": [
+          "cwrapper",
+        ],
+      },
+      # Use C++1y for Python libraries, which depend on it.
+      'cflags_cc': [ '-std=c++1y', '-frtti', '-fexceptions' ],
+      'xcode_settings': {
+        'CLANG_CXX_LANGUAGE_STANDARD': 'c++1y',
+      },
+    },
   ],
 }

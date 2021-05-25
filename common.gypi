@@ -21,7 +21,12 @@
             'SDKROOT': 'iphoneos',
             'SUPPORTED_PLATFORMS': 'iphonesimulator iphoneos',
           }
-        }]
+        }],
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'ARCHS': ['$(ARCHS_STANDARD_INCLUDING_64_BIT)'],
+          },
+        }],
     ],
     'configurations': {
       'Debug': {
