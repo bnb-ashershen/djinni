@@ -332,7 +332,7 @@ class CWrapperGenerator(spec: Spec) extends Generator(spec) {
 
   def writeOptionalContainerFromCpp(optHandle: String, handle: String, retType: String, djinniWrapper: String, deleteMethod: String, w: IndentWriter): Unit = {
     w.wl("djinni::Handle" + t(optHandle) + " " +  djinniWrapper + "::fromCpp" + p( spec.cppOptionalTemplate + t(retType) + " dc") + " {").nested {
-      w.wl("if (dc == std::experimental::nullopt) {").nested {
+      w.wl("if (dc == std::nullopt) {").nested {
         w.wl("return nullptr;")
       }
       w.wl("}")
@@ -348,7 +348,7 @@ class CWrapperGenerator(spec: Spec) extends Generator(spec) {
         w.wl("return " + spec.cppOptionalTemplate + t(retTypeStr) + p(djinniWrapper + "::toCpp" + p("djinni::optionals::fromOptionalHandle(std::move(dh), " + deleteMethod +")")) + ";")
       }
       w.wl("}")
-      w.wl("return std::experimental::nullopt;")
+      w.wl("return std::nullopt;")
     }
     w.wl("}")
     w.wl
@@ -711,7 +711,7 @@ class CWrapperGenerator(spec: Spec) extends Generator(spec) {
       w.wl("#include <iostream> // for debugging")
       w.wl("#include <cassert>")
       w.wl("#include \"wrapper_marshal.hpp\"")
-      w.wl("#include \"" + ident + ".hpp\"")  // include abstract cpp base class header
+      w.wl("#include \"" + spec.cWrapperIncludeCppPrefix + ident + ".hpp\"")  // include abstract cpp base class header
       // Includes for Djinni Wrappers
       if (includes.nonEmpty) {
         w.wl
@@ -766,7 +766,7 @@ class CWrapperGenerator(spec: Spec) extends Generator(spec) {
       w.wl
       w.wl("#include <atomic>")
       w.wl("#include " + spec.cppOptionalHeader)
-      w.wl("#include \"" + ident + ".hpp\"")  // include abstract cpp base class header
+      w.wl("#include \"" + spec.cWrapperIncludeCppPrefix + ident + ".hpp\"")  // include abstract cpp base class header
       writeAsExternC(w, w => {
         w.wl("#include \"" + fileName + ".h\"") // include own header
       })
@@ -1113,8 +1113,6 @@ class CWrapperGenerator(spec: Spec) extends Generator(spec) {
   def generateInterface(origin: String, ident: Ident, doc: Doc, typeParams: Seq[TypeParam], i: Interface): Unit ={
     val cppClass = idCpp.ty(ident.name)
 
-    System.out.println("Generting C interface...", origin)
-
     val refs = new CRefs(ident, origin)
     // first collect all references, don't write
     i.methods.map(m => {
@@ -1180,7 +1178,7 @@ class CWrapperGenerator(spec: Spec) extends Generator(spec) {
       w.wl(spec.cppOptionalTemplate + t(withCppNs(idCpp.enumType(ident.name))) +
             " get_boxed_enum_" + idCpp.method(ident.name) + "_from_int32" + p("int32_t e") + " {").nested {
         w.wl("if (e == -1) { // to signal null enum").nested {
-          w.wl("return std::experimental::nullopt;")
+          w.wl("return std::nullopt;")
         }
         w.wl("}")
         w.wl("return " + spec.cppOptionalTemplate + t(withCppNs(idCpp.enumType(ident.name))) +

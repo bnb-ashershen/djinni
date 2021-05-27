@@ -92,12 +92,13 @@ package object generatorTools {
                    pyOutFolder: Option[File],
                    pyPackageName: String,
                    pyIdentStyle: PythonIdentStyle,
+                   pyImportPrefix: String,
                    pycffiOutFolder: Option[File],
                    pycffiPackageName: String,
                    pycffiDynamicLibList: String,
-                   idlFileName: String,
                    cWrapperOutFolder: Option[File],
-                   pyImportPrefix: String)
+                   cWrapperIncludeCppPrefix: String,
+                   idlFileName: String)
 
   def preComma(s: String) = {
     if (s.isEmpty) s else ", " + s
@@ -258,21 +259,21 @@ package object generatorTools {
         new EmbindGenerator(spec).generate(idl)
       }
       if (spec.pyOutFolder.isDefined) {
-        DEBUG(spec.pyOutFolder.get.toString)
+        //DEBUG(spec.pyOutFolder.get.toString)
         if (!spec.skipGeneration) {
           createFolder("Python", spec.pyOutFolder.get)
         }
         new PythonGenerator(spec).generate(idl)
       }
       if (spec.cWrapperOutFolder.isDefined) {
-        DEBUG(spec.cWrapperOutFolder.get.toString)
+        //DEBUG(spec.cWrapperOutFolder.get.toString)
         if (!spec.skipGeneration) {
           createFolder("C", spec.cWrapperOutFolder.get)
         }
         new CWrapperGenerator(spec).generate(idl)
       }
       if (spec.pycffiOutFolder.isDefined) {
-        DEBUG(spec.pycffiOutFolder.get.toString)
+        //DEBUG(spec.pycffiOutFolder.get.toString)
         if (!spec.skipGeneration) {
           createFolder("Cffi", spec.pycffiOutFolder.get)
         }

@@ -92,6 +92,7 @@ object Main {
     var pyPackageName: String = ""
     var pyIdentStyle = IdentStyle.pythonDefault
     var cWrapperOutFolder: Option[File] = None
+    var cWrapperIncludeCppPrefix: String = ""
     var pycffiPackageName: String = ""
     var pycffiDynamicLibList: String = ""
     var pycffiOutFolder: Option[File] = None
@@ -231,16 +232,19 @@ object Main {
         .text("The header which defines optional overrides for embind class methods")
       opt[File]("py-out").valueName("<out-folder>").foreach(x => pyOutFolder = Some(x))
         .text("The output folder for Python files (Generator disabled if unspecified).")
+      opt[String]("py-import-prefix").valueName("<import-prefix>").foreach(pyImportPrefix = _)
+        .text("The import prefix used within python genereated files (default: \"\")")
       opt[File]("pycffi-out").valueName("<out-folder>").foreach(x => pycffiOutFolder = Some(x))
         .text("The output folder for PyCFFI files (Generator disabled if unspecified).")
-      opt[String]("pycffi-package-name").valueName("...").foreach(x => pycffiPackageName= x)
+      opt[String]("pycffi-package-name").valueName("<package-name>").foreach(x => pycffiPackageName= x)
         .text("The package name to use for the generated PyCFFI classes.")
-      opt[String]("pycffi-dynamic-lib-list").valueName("...").foreach(x => pycffiDynamicLibList= x)
+      opt[String]("pycffi-dynamic-lib-list").valueName("<dynamic-lib-list>").foreach(x => pycffiDynamicLibList= x)
         .text("The names of the dynamic libraries to be linked with PyCFFI.")
       opt[File]("c-wrapper-out").valueName("<out-folder>").foreach(x => cWrapperOutFolder = Some(x))
         .text("The output folder for Wrapper C files (Generator disabled if unspecified).")
-      opt[String]("py-import-prefix").valueName("<import-prefix>").foreach(pyImportPrefix = _)
-        .text("The import prefix used within python genereated files (default: \"\")")
+      opt[String]("c-wrapper-include-cpp-prefix").valueName("<prefix>").foreach(cWrapperIncludeCppPrefix = _)
+        .text("The prefix for #include of the main C++ header files from C-wrapper files.")
+      
 
       note("\nIdentifier styles (ex: \"FooBar\", \"fooBar\", \"foo_bar\", \"FOO_BAR\", \"m_fooBar\")\n")
       identStyle("ident-java-enum",      c => { javaIdentStyle = javaIdentStyle.copy(enum = c) })
@@ -400,12 +404,13 @@ object Main {
       pyOutFolder,
       pyPackageName,
       pyIdentStyle,
+      pyImportPrefix,
       pycffiOutFolder,
       pycffiPackageName,
       pycffiDynamicLibList,
-      idlFileName,
       cWrapperOutFolder,
-      pyImportPrefix)
+      cWrapperIncludeCppPrefix,
+      idlFileName)
 
     try {
       val r = generate(idl, outSpec)
