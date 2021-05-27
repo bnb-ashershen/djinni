@@ -72,7 +72,26 @@ class PythonMarshal(spec: Spec) extends Marshal(spec) {
     case MDate => List(ImportRef("from djinni.pycffi_marshal import CPyDate"))
     case MList => List(ImportRef("from djinni.pycffi_marshal import CPyObject"))
     case MSet | MMap => List(ImportRef("from djinni.pycffi_marshal import CPyObject, CPyObjectProxy"))
-    case e: MExtern => List() // TODO: implement e: MExtern
+    case e: MExtern => {
+      val className = idPython.className(e.name)
+      if (idPython.local(e.name) != idPython.local(exclude)) {
+        e.defType match {
+          case DInterface  =>
+            List(
+              ImportRef("from " + spec.pyImportPrefix + idPython.local(e.name) + " import " + className),
+              ImportRef("from " + spec.pyImportPrefix + idPython.local(e.name)  + " import " + className + "Helper"))
+          case DRecord =>
+            List(
+              ImportRef("from djinni.pycffi_marshal import CPyRecord"),
+              ImportRef("from " + spec.pyImportPrefix + idPython.local(e.name) + " import " + className),
+              ImportRef("from " + spec.pyImportPrefix + idPython.local(e.name) + "_helper" + " import " + className + "Helper"))
+          case DEnum => List(
+              ImportRef("from djinni.pycffi_marshal import CPyEnum"),
+              ImportRef("from " + spec.pyImportPrefix + idPython.local(e.name)  + " import " + className))
+        }
+      }
+      else List()
+    }
     case _ => List()
   }
 
@@ -195,7 +214,7 @@ class PythonMarshal(spec: Spec) extends Marshal(spec) {
         case MString | MBinary => true
         case _ => false
       }
-    case e: MExtern => false // TODO: implement e: MExtern
+    //case e: MExtern => false // TODO: implement e: MExtern
     case _ => isPacked(ty.resolved)
   }
 
@@ -235,7 +254,7 @@ class PythonMarshal(spec: Spec) extends Marshal(spec) {
       case MString => idPython.method(name + ".get_djinni_string()")
       case MBinary => idPython.method(name + ".get_djinni_binary()")
       case MOptional => convertFrom(name, ty, true)
-      case e: MExtern => name // TODO: implement e: MExtern
+      //case e: MExtern => name // TODO: implement e: MExtern
       case _ => convertFrom(name, ty, isOpt)
     }
   }
@@ -247,7 +266,7 @@ class PythonMarshal(spec: Spec) extends Marshal(spec) {
         case _ => fromRAII(name, ty.resolved.args(0), true)
       }
     }
-    case e: MExtern => name // TODO: implement e: MExtern
+    //case e: MExtern => name // TODO: implement e: MExtern
     case _ => fromRAII(name, ty.resolved, false)
   }
 
@@ -255,7 +274,7 @@ class PythonMarshal(spec: Spec) extends Marshal(spec) {
     ty.base match {
       case MString => idPython.method(name + ".release_djinni_string()")
       case MBinary => idPython.method(name + ".release_djinni_binary()")
-      case e: MExtern => name // TODO: implement e: MExtern
+      //case e: MExtern => name // TODO: implement e: MExtern
       case _ => fromRAII(name, ty, isOpt) // nothing else needs to be released yet, the asserts for empty c_data_sets would fail otherwise
 
     }
@@ -267,7 +286,7 @@ class PythonMarshal(spec: Spec) extends Marshal(spec) {
           idPython.method(name + ".release_djinni_boxed" + "()")
         case _ => releaseRAII(name, ty.resolved.args(0), true)
       }
-    case e: MExtern => name // TODO: implement e: MExtern
+    //case e: MExtern => name // TODO: implement e: MExtern
     case _ => releaseRAII(name, ty.resolved, false)
   }
 
@@ -296,7 +315,11 @@ class PythonMarshal(spec: Spec) extends Marshal(spec) {
           case _ => convertTo(name, ty.args(0), true)
         }
       }
-      case e: MExtern => name // TODO: implement e: MExtern
+      case e: MExtern => e.defType match {
+        case DInterface => idPython.className(e.name) + "Helper" + ".toPy" + p(local)
+        case DRecord => "CPyRecord.toPy" + opt_s + p(idPython.className(e.name) + ".c_data_set" + ", " + name) // TODO different in that it does not .local, why would it
+        case DEnum => "CPyEnum.toPy" + opt_s + p(idPython.className(e.name) + ", " + name)
+      }
       case _ => name
     }
   }
@@ -315,7 +338,7 @@ class PythonMarshal(spec: Spec) extends Marshal(spec) {
         case MString | MBinary => convertToRelease(name, ty.args(0))
         case _ => convertTo(name, ty, false)
       }
-      case e: MExtern => name // TODO: implement e: MExtern
+      //case e: MExtern => name // TODO: implement e: MExtern
       case _ => convertTo(name, ty, false)
     }
   }
@@ -344,7 +367,11 @@ class PythonMarshal(spec: Spec) extends Marshal(spec) {
           case _ => convertFrom(name, ty.args(0), true)
         }
       }
-      case e: MExtern => name // TODO: implement e: MExtern
+      case e: MExtern => e.defType match {
+        case DInterface => idPython.className(e.name) + "Helper" + ".fromPy(" + local + ")"
+        case DRecord => "CPyRecord.fromPy" + opt_s + p(idPython.className(e.name) + ".c_data_set, " + local)
+        case DEnum => "CPyEnum.fromPy" + opt_s + p(local)
+      }
       case _ => name
     }
   }

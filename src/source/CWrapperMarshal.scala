@@ -30,6 +30,7 @@ class CWrapperMarshal(spec: Spec) extends Marshal(spec) { // modeled(pretty much
   val dh = "dh__" // prefix for c files containing djinni helpers for records
   val pyHelper = "py_helper_"
   val djinniObjectHandle = "DjinniObjectHandle"
+  val idCppDef = IdentStyle.cppDefault
 
   def ctypename(tm: MExpr, forHeader: Boolean): String = cParamType(tm, forHeader)
   override def typename(tm: MExpr): String = cParamType(tm, false)
@@ -74,9 +75,13 @@ class CWrapperMarshal(spec: Spec) extends Marshal(spec) { // modeled(pretty much
     case d: MDef => d.defType match {
       case DInterface => List(ImportRef(q(cw + d.name + ".hpp")))
       case DRecord => List(ImportRef(q(dh + d.name + ".hpp")))
-      case DEnum => List(ImportRef(q(d.name + ".hpp")), ImportRef(q(dh + d.name + ".hpp")))
+      case DEnum => List(ImportRef(q(dh + d.name + ".hpp")))
     }
-    case e: MExtern => throw new NotImplementedError()
+    case e: MExtern => e.defType match {
+      case DInterface => List(ImportRef(q(cw + e.name + ".hpp")))
+      case DRecord => List(ImportRef(q(dh + e.name + ".hpp")))
+      case DEnum => List(ImportRef(q(dh + e.name + ".hpp")))
+    }
     case _ => List()
     }
 
@@ -96,7 +101,11 @@ class CWrapperMarshal(spec: Spec) extends Marshal(spec) { // modeled(pretty much
       case MDate => true
       case _ => needsRAII(tm.args(0))
     }
-   case e: MExtern => throw new NotImplementedError()
+   case e: MExtern => e.defType match {
+      case DRecord => true
+      case DInterface => true
+      case DEnum => false // we pass as ints
+    }
    case _ => false
   }
 
@@ -108,7 +117,7 @@ class CWrapperMarshal(spec: Spec) extends Marshal(spec) { // modeled(pretty much
       case MDate => true
       case _ => false
     }
-    case e: MExtern => throw new NotImplementedError()
+    case e: MExtern => false
     case _ => false
   }
 
@@ -121,16 +130,21 @@ class CWrapperMarshal(spec: Spec) extends Marshal(spec) { // modeled(pretty much
         case p: MPrimitive => p.cName
         case MDate => "uint64_t"
         case MString | MBinary =>
-          val idlName = idCpp.ty(m.asInstanceOf[MOpaque].idlName)
+          val idlName = idCppDef.ty(m.asInstanceOf[MOpaque].idlName)
           structPrefix + "Djinni" + idlName + " *"
         case MList | MSet | MMap => structPrefix + djinniObjectHandle + " *"
         case MOptional => tm.args(0).base match  {
           case m @ (MPrimitive(_,_,_,_,_,_,_,_) | MDate) =>
             val idlName = m.asInstanceOf[MOpaque].idlName
-            structPrefix + "DjinniBoxed" + idCpp.ty(idlName) + " *"
+            structPrefix + "DjinniBoxed" + idCppDef.ty(idlName) + " *"
           case MList | MSet | MMap => structPrefix + "DjinniOptionalObjectHandle *"
           case d: MDef =>
             d.defType match {
+              case DRecord => structPrefix + "DjinniOptionalRecordHandle *"
+              case _ => base(tm.args(0).base)
+            }
+          case e: MExtern =>
+            e.defType match {
               case DRecord => structPrefix + "DjinniOptionalRecordHandle *"
               case _ => base(tm.args(0).base)
             }
@@ -143,7 +157,11 @@ class CWrapperMarshal(spec: Spec) extends Marshal(spec) { // modeled(pretty much
             case DInterface =>  structPrefix + djinniWrapper + idCpp.ty(d.name) + " *"
           }
         case p: MParam => idCpp.typeParam(p.name)
-        case e: MExtern => throw new NotImplementedError()
+        case e: MExtern => e.defType match {
+          case DEnum => "int"
+          case DRecord => structPrefix + "DjinniRecordHandle *"
+          case DInterface =>  structPrefix + djinniWrapper + idCpp.ty(e.name) + " *"
+        }
       }
     }
     def expr(tm: MExpr): String = {
@@ -173,6 +191,10 @@ class CWrapperMarshal(spec: Spec) extends Marshal(spec) { // modeled(pretty much
         case _ => "optional_" + getReleaseMethodName(tm.args(0))
       }
       case _ => "optional_" + getReleaseMethodName(tm.args(0))
+    }
+    case e: MExtern => e.defType match  {
+      case DInterface => idCpp.method(e.name) + "___wrapper_dec_ref"
+      case _ => idCpp.method(e.name) + "___delete"
     }
     case _ => throw new NotImplementedError()
   }
@@ -232,7 +254,7 @@ class CWrapperMarshal(spec: Spec) extends Marshal(spec) { // modeled(pretty much
         case DRecord => valueType
         case _  => refType
       }
-      case e: MExtern => throw new NotImplementedError()
+      case e: MExtern => valueType
       case _ => refType
     }
     toType(tm)
@@ -259,10 +281,10 @@ class CWrapperMarshal(spec: Spec) extends Marshal(spec) { // modeled(pretty much
         ty.args(0).base match {
           case MPrimitive(_,_,_,_,_,_,_,_) | MDate =>
             val idlName = ty.args(0).base.asInstanceOf[MOpaque].idlName
-            "DjinniBoxed" + idCpp.ty(idlName) + "::toCpp" + p(exprArg)
+            "DjinniBoxed" + idCppDef.ty(idlName) + "::toCpp" + p(exprArg)
           case MString | MBinary =>
             val idlName = ty.args(0).base.asInstanceOf[MOpaque].idlName
-            "DjinniOptional" + idCpp.ty(idlName) + "::toCpp" + p(exprArg)
+            "DjinniOptional" + idCppDef.ty(idlName) + "::toCpp" + p(exprArg)
           case MList | MMap | MSet => "Djinni" + idCpp.ty(toCIdlType(ty.args(0))) + "::toCpp" + p(exprArg)
           case d: MDef => d.defType match {
             case DRecord => "Djinni" + idCpp.ty(d.name) + "::toCpp"+ p(exprArg)
@@ -273,13 +295,18 @@ class CWrapperMarshal(spec: Spec) extends Marshal(spec) { // modeled(pretty much
         }
       }
       case MDate => "DjinniDate::toCpp" + p(cppExpr)
-      case MString| MBinary| MList | MMap | MSet => "Djinni" + idCpp.ty(toCIdlType(ty)) + "::toCpp" + p(exprArg)
+      case MString| MBinary => "Djinni" + idCppDef.ty(toCIdlType(ty)) + "::toCpp" + p(exprArg)
+      case MList | MMap | MSet => "Djinni" + idCpp.ty(toCIdlType(ty)) + "::toCpp" + p(exprArg)
       case d: MDef => d.defType match {
         case DInterface => djinniWrapper + idCpp.ty(d.name) + "::get" + p(exprArg)
         case DRecord => "Djinni" + idCpp.ty(d.name) + "::toCpp" + p(exprArg)
         case DEnum => "static_cast<" + withCppNs(idCpp.enumType(d.name)) + ">" + p(cppExpr)
       }
-      case e: MExtern => throw new NotImplementedError()
+      case e: MExtern => e.defType match {
+        case DInterface => djinniWrapper + idCpp.ty(e.name) + "::get" + p(exprArg)
+        case DRecord => "Djinni" + idCpp.ty(e.name) + "::toCpp" + p(exprArg)
+        case DEnum => "static_cast<" + withCppNs(idCpp.enumType(e.name)) + ">" + p(cppExpr)
+      }
       case _ =>  cppExpr // MParam <- didn't need to do anything here
     }
   }
@@ -292,24 +319,28 @@ class CWrapperMarshal(spec: Spec) extends Marshal(spec) { // modeled(pretty much
           ty.args(0).base match {
             case MPrimitive(_,_,_,_,_,_,_,_) | MDate =>
               val idlName = ty.args(0).base.asInstanceOf[MOpaque].idlName
-              "DjinniBoxed" + idCpp.ty(idlName) + "::fromCpp" + p(cppExpr)
+              "DjinniBoxed" + idCppDef.ty(idlName) + "::fromCpp" + p(cppExpr)
             case MString | MBinary  =>
               val idlName = ty.args(0).base.asInstanceOf[MOpaque].idlName
-              "DjinniOptional" + idCpp.ty(idlName) + "::fromCpp" + p(cppExpr)
+              "DjinniOptional" + idCppDef.ty(idlName) + "::fromCpp" + p(cppExpr)
             case MList | MMap | MSet => "Djinni" + idCpp.ty(toCIdlType(ty.args(0))) + "::fromCpp" + p(cppExpr)
             case _ => convertFrom(cppExpr, ty.args(0), tempExpr)
           }
         }
-        case MString | MBinary | MDate | MList | MSet | MMap =>
-          val idlName = idCpp.ty(toCIdlType(ty))
-          "Djinni" + idlName + "::fromCpp" + p(cppExpr)
+        case MString | MBinary | MDate => "Djinni" + idCppDef.ty(toCIdlType(ty)) + "::fromCpp" + p(cppExpr)
+        case MList | MSet | MMap => "Djinni" + idCpp.ty(toCIdlType(ty)) + "::fromCpp" + p(cppExpr)
         case d: MDef => d.defType match {
           case DInterface => (djinniWrapper + idCpp.ty(d.name) + "::wrap"
             + p(if (tempExpr) { cppExpr } else { "std::move" + p(cppExpr) })) // Move only when it wouldn't be pessimizing
           case DRecord => "Djinni" + idCpp.ty(d.name) + "::fromCpp" + p(cppExpr)
           case DEnum => "int32_from_enum_" + idCpp.method(d.name) + p(cppExpr)
         }
-        case e: MExtern => throw new NotImplementedError()
+        case e: MExtern => e.defType match {
+          case DInterface => (djinniWrapper + idCpp.ty(e.name) + "::wrap"
+            + p(if (tempExpr) { cppExpr } else { "std::move" + p(cppExpr) })) // Move only when it wouldn't be pessimizing
+          case DRecord => "Djinni" + idCpp.ty(e.name) + "::fromCpp" + p(cppExpr)
+          case DEnum => "int32_from_enum_" + idCpp.method(e.name) + p(cppExpr)
+        }
         case _ => cppExpr // TODO: MParam <- didn't need to do anything here
       }
   }

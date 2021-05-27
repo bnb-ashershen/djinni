@@ -214,7 +214,6 @@ class PythonGenerator(spec: Spec) extends Generator(spec) {
   }
 
   def generateContainer(tm: MExpr, isOpt: Boolean, fileName: String, classAsMethodName: String, ident: Ident, origin: String, python: mutable.TreeSet[String]) = {
-//    System.out.println("PYTHON: generating container ", fileName)
     val helperClass = idPython.className(fileName) + "Helper"
     val proxyName = idPython.className(fileName) + "Proxy"
     val next = if(tm.base == MList) ""
@@ -779,7 +778,6 @@ class PythonGenerator(spec: Spec) extends Generator(spec) {
   }
 
   override def generateInterface(origin: String, ident: Ident, doc: Doc, typeParams: Seq[TypeParam], i: Interface): Unit = {
-    System.out.println("Generting python interface...", origin, ident)
     val pythonClass = idPython.className(ident.name)
     val cMethodWrapper = idPython.method(ident.name)
     val refs = new PythonRefs(ident, origin)
@@ -840,27 +838,16 @@ class PythonGenerator(spec: Spec) extends Generator(spec) {
         generateRecursiveConstants(w, i.consts, idPython.className(ident.name))
         w.wl
       }
-      if (i.ext.cpp && i.ext.py) {
+      if (i.ext.cpp) {
         writeCppProxyClass(pythonClass, cMethodWrapper, i.methods, w)
+      }
+      if (i.ext.py) {
         writeCallbacksHelperClass(ident, pythonClass, i.methods, i.ext, w)
-        w.wl("class " + pythonClass + "Helper" + ":").nested {
-          w.wl("c_data_set = MultiSet()")
-          writeHelperMethodsForCppImplementedInterface(ident.name, i.ext, w)
-          writeHelperMethodsForPythonImplementedInterface(ident.name, i.methods, i.ext, w)
-        }
-      } else if (i.ext.cpp) {
-        writeCppProxyClass(pythonClass, cMethodWrapper, i.methods, w)
-        w.wl("class " + pythonClass + "Helper" + ":").nested {
-          w.wl("c_data_set = MultiSet()")
-          writeHelperMethodsForCppImplementedInterface(ident.name, i.ext, w)
-        }
-      } else if (i.ext.py) {
-        writeCallbacksHelperClass(ident, pythonClass, i.methods, i.ext, w)
-        w.wl("class " + pythonClass + "Helper" + ":").nested {
-          w.wl("c_data_set = MultiSet()")
-          writeHelperMethodsForCppImplementedInterface(ident.name, i.ext, w)
-          writeHelperMethodsForPythonImplementedInterface(ident.name, i.methods, i.ext, w)
-        }
+      }
+      w.wl("class " + pythonClass + "Helper" + ":").nested {
+        w.wl("c_data_set = MultiSet()")
+        writeHelperMethodsForCppImplementedInterface(ident.name, i.ext, w)
+        writeHelperMethodsForPythonImplementedInterface(ident.name, i.methods, i.ext, w)
       }
     })
   }
