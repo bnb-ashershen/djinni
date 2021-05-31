@@ -88,7 +88,9 @@ package object generatorTools {
                    yamlOutFile: Option[String],
                    yamlPrefix: String,
                    embindOutFolder: Option[File],
-                   embindOverrideHeader: Option[String])
+                   embindOverrideHeader: Option[String],
+                   pybindOutFolder: Option[File],
+                   pybindOverrideHeader: Option[String])
 
   def preComma(s: String) = {
     if (s.isEmpty) s else ", " + s
@@ -110,6 +112,10 @@ package object generatorTools {
                             method: IdentConverter, field: IdentConverter, local: IdentConverter,
                             enum: IdentConverter, const: IdentConverter)
 
+  case class PythonIdentStyle(ty: IdentConverter, className: IdentConverter, typeParam: IdentConverter,
+                            method: IdentConverter, field: IdentConverter, local: IdentConverter,
+                            enum: IdentConverter, const: IdentConverter)
+
   object IdentStyle {
     val camelUpper = (s: String) => s.split('_').map(firstUpper).mkString
     val camelLower = (s: String) => {
@@ -124,6 +130,7 @@ package object generatorTools {
     val javaDefault = JavaIdentStyle(camelUpper, camelUpper, camelLower, camelLower, camelLower, underCaps, underCaps)
     val cppDefault = CppIdentStyle(camelUpper, camelUpper, camelUpper, underLower, underLower, underLower, underCaps, underCaps)
     val objcDefault = ObjcIdentStyle(camelUpper, camelUpper, camelLower, camelLower, camelLower, camelUpper, camelUpper)
+    val pythonDefault = PythonIdentStyle(underLower, camelUpper, underLower, underLower, underLower, underLower, underUpper, underCaps)
 
     val styles = Map(
       "FooBar" -> camelUpper,
@@ -239,6 +246,12 @@ package object generatorTools {
           createFolder("embind", spec.embindOutFolder.get)
         }
         new EmbindGenerator(spec).generate(idl)
+      }
+      if (spec.pybindOutFolder.isDefined) {
+        if (!spec.skipGeneration) {
+          createFolder("pybind", spec.pybindOutFolder.get)
+        }
+        new PybindGenerator(spec).generate(idl)
       }
       None
     }

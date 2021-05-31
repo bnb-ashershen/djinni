@@ -88,6 +88,8 @@ object Main {
     var yamlPrefix: String = ""
     var embindOutFolder: Option[File] = None
     var embindOverrideHeader: Option[String] = None
+    var pybindOutFolder: Option[File] = None
+    var pybindOverrideHeader: Option[String] = None
 
     val argParser = new scopt.OptionParser[Unit]("djinni") {
 
@@ -221,6 +223,10 @@ object Main {
         .text("The folder for the embind C++ output files (Generator disabled if unspecified).")
       opt[String]("embind-override-header").valueName("<header>").foreach(x => embindOverrideHeader = Some(x))
         .text("The header which defines optional overrides for embind class methods")
+      opt[File]("pybind-out").valueName("<out-folder>").foreach(x => pybindOutFolder = Some(x))
+        .text("The folder for the pybind C++ output files (Generator disabled if unspecified).")
+      opt[String]("pybind-override-header").valueName("<header>").foreach(x => pybindOverrideHeader = Some(x))
+        .text("The header which defines optional overrides for pybind class methods")
 
       note("\nIdentifier styles (ex: \"FooBar\", \"fooBar\", \"foo_bar\", \"FOO_BAR\", \"m_fooBar\")\n")
       identStyle("ident-java-enum",      c => { javaIdentStyle = javaIdentStyle.copy(enum = c) })
@@ -375,7 +381,9 @@ object Main {
       yamlOutFile,
       yamlPrefix,
       embindOutFolder,
-      embindOverrideHeader)
+      embindOverrideHeader,
+      pybindOutFolder,
+      pybindOverrideHeader)
 
 
     try {
