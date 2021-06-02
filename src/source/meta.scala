@@ -112,4 +112,14 @@ def isInterface(ty: MExpr): Boolean = {
 def isOptionalInterface(ty: MExpr): Boolean = {
   ty.base == MOptional && ty.args.length == 1 && isInterface(ty.args.head)
 }
+
+def isRecordByValue(tm: MExpr): Boolean = tm.base match {
+  case e: MExtern => e.defType match {
+    case DRecord => e.cpp.byValue
+    case _ => false
+  }
+  case MOptional | MList | MSet => isRecordByValue(tm.args.head)
+  case MMap => isRecordByValue(tm.args.head) || isRecordByValue(tm.args.last)
+  case _ => false
+}
 }

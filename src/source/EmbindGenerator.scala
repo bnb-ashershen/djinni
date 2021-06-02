@@ -177,13 +177,4 @@ class EmbindGenerator(spec: Spec) extends Generator(spec) {
         }
     })
   }
-
-  def isRecordByValue(tm: MExpr): Boolean = tm.base match {
-    case e: MExtern => e.defType match {
-      case DRecord => e.cpp.byValue
-      case _ => false
-    }
-    case MOptional => isRecordByValue(tm.args.head)
-    case _ => false
-  }
 }

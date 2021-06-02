@@ -179,15 +179,6 @@ class PybindGenerator(spec: Spec) extends Generator(spec) {
     })
   }
 
-  def isRecordByValue(tm: MExpr): Boolean = tm.base match {
-    case e: MExtern => e.defType match {
-      case DRecord => e.cpp.byValue
-      case _ => false
-    }
-    case MOptional => isRecordByValue(tm.args.head)
-    case _ => false
-  }
-
   def pydoc(doc: Doc): String = doc.lines.length match {
     case 0 => q("")
     case 1 => "R" + q("pydoc(" + doc.lines.head + ")pydoc")
