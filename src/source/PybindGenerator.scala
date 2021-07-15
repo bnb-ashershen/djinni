@@ -114,20 +114,11 @@ class PybindGenerator(spec: Spec) extends Generator(spec) {
         w.w(s"void pybind11_init_$self(py::module& m)").braced {
             w.wl(s"py::class_<$self>(m, "+q(idPybind.className(self))+", "+pydoc(doc)+")")
             w.increase()
-
-            // HACK: pybind doesn't support non-copyable objects
-            val typeByValue = r.fields.exists(f => isRecordByValue(f.ty.resolved))
-            w.w(if(typeByValue) "//" else "")
-
             val tys = r.fields.map(f => marshal.fieldType(f.ty)).mkString(", ")
             w.wl(s".def(py::init<$tys>())")
             for(f <- r.fields) {
-                // HACK: pybind doesn't support non-copyable objects
-                w.w(if (isRecordByValue(f.ty.resolved)) "//" else "")
-                val d = if (isRecordByValue(f.ty.resolved)) Doc(Seq()) else f.doc
-
                 val name = f.ident.name
-                w.wl(".def_readwrite(" + q(idPybind.field(name)) + s", &$self::$name, " + pydoc(d) + ")")
+                w.wl(".def_readwrite(" + q(idPybind.field(name)) + s", &$self::$name, " + pydoc(f.doc) + ")")
             }
             w.wl(overrideDefine)
             w.wl(";")
@@ -159,18 +150,8 @@ class PybindGenerator(spec: Spec) extends Generator(spec) {
             w.wl(s"py::class_<$self, std::shared_ptr<$self>>(m, "+q(idPybind.className(self))+", "+pydoc(doc)+")")
             w.increase()
             for(m <- i.methods) {
-                // HACK: pybind doesn't support non-copyable objects passing by value
-                val paramByValue = m.params.exists(p => isRecordByValue(p.ty.resolved))
-                val retByValue = m.ret match {
-                    case Some(ty) => isRecordByValue(ty.resolved)
-                    case _ => false
-                }
-                val commentUnsupportedMethod = if(paramByValue || retByValue) "//" else ""
-                w.w(commentUnsupportedMethod)
-                val d = if(paramByValue || retByValue) Doc(Seq()) else m.doc
-
                 val name = m.ident.name
-                w.wl(".def(" + q(idPybind.method(name)) + s", &$self::$name, " + pydoc(d) + ")")
+                w.wl(".def(" + q(idPybind.method(name)) + s", &$self::$name, " + pydoc(m.doc) + ")")
             }
             w.wl(overrideDefine)
             w.wl(";")

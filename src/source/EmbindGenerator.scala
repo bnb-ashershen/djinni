@@ -104,27 +104,15 @@ class EmbindGenerator(spec: Spec) extends Generator(spec) {
         w.w(s"EMSCRIPTEN_BINDINGS($self)").braced {
             w.wl(s"class_<$self>("+q(idEmbind.ty(self))+")")
             w.increase()
-
-            // HACK: embind doesn't support non-copyable objects
-            val typeByValue = r.fields.exists(f => isRecordByValue(f.ty.resolved))
-            w.w(if(typeByValue) "//" else "")
-
             val tys = r.fields.map(f => marshal.fieldType(f.ty)).mkString(", ")
             w.wl(s".constructor<$tys>()")
             for(f <- r.fields) {
-                // HACK: embind doesn't support non-copyable objects
-                w.w(if (isRecordByValue(f.ty.resolved)) "//" else "")
-
                 val name = f.ident.name
                 w.wl(".property(" + q(idEmbind.field(name)) + s", &$self::$name)")
             }
             w.wl(overrideDefine)
             w.wl(";")
             w.decrease()
-
-            // HACK: embind doesn't support non-copyable objects
-            w.w(if(typeByValue) "//" else "")
-
             w.wl(s"register_vector<$self>(" + q("Vector" + idEmbind.ty(self)) + ");")
         }
     })
@@ -153,15 +141,6 @@ class EmbindGenerator(spec: Spec) extends Generator(spec) {
             w.wl(s"class_<$self>("+q(idEmbind.ty(self))+")")
             w.increase()
             for(m <- i.methods) {
-                // HACK: embind doesn't support non-copyable objects passing by value
-                val paramByValue = m.params.exists(p => isRecordByValue(p.ty.resolved))
-                val retByValue = m.ret match {
-                    case Some(ty) => isRecordByValue(ty.resolved)
-                    case _ => false
-                }
-                val commentUnsupportedMethod = if(paramByValue || retByValue) "//" else ""
-                w.w(commentUnsupportedMethod)
-
                 val name = m.ident.name
                 if (m.static) {
                     w.wl(".class_function(" + q(idEmbind.method(name)) + s", &$self::$name)")
