@@ -112,7 +112,12 @@ class ObjcGenerator(spec: Spec) extends BaseObjcGenerator(spec) {
       }
       w.wl
       writeDoc(w, doc)
-      if (i.ext.objc) w.wl(s"@protocol $self") else w.wl(s"@interface $self : NSObject")
+      var interface_str = s"@interface $self : NSObject"
+      if (spec.objcExportSymbols) {
+        var export_symbols = s"__attribute__((__visibility__(${'"'}default${'"'})))"
+        interface_str = s"$export_symbols $interface_str"
+      }
+      if (i.ext.objc) w.wl(s"@protocol $self") else w.wl(interface_str)
       for (m <- i.methods) {
         w.wl
         writeMethodDoc(w, m, idObjc.local)
@@ -172,7 +177,13 @@ class ObjcGenerator(spec: Spec) extends BaseObjcGenerator(spec) {
     // Generate the header file for record
     writeObjcFile(marshal.headerName(objcName), origin, refs.header, w => {
       writeDoc(w, doc)
-      w.wl(s"@interface $self : NSObject")
+
+      var record_str = s"@interface $self : NSObject"
+      if (spec.objcExportSymbols) {
+        var export_symbols = s"__attribute__((__visibility__(${'"'}default${'"'})))"
+        record_str = s"$export_symbols $record_str"
+      }
+      w.wl(record_str)
 
       def writeInitializer(sign: String, prefix: String) {
         val decl = s"$sign (nonnull instancetype)$prefix$firstInitializerArg"
