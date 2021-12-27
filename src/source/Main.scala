@@ -71,6 +71,7 @@ object Main {
     var objcIdentStyle = IdentStyle.objcDefault
     var objcTypePrefix: String = ""
     var objcIncludePrefix: String = ""
+    var objcExportSymbols: Boolean = false
     var objcExtendedRecordIncludePrefix: String = ""
     var objcSwiftBridgingHeaderName: Option[String] = None
     var objcClosedEnums: Boolean = false
@@ -182,6 +183,8 @@ object Main {
         .text("The prefix for Objective-C data types (usually two or three letters)")
       opt[String]("objc-include-prefix").valueName("<prefix>").foreach(objcIncludePrefix = _)
         .text("The prefix for #import of header files from Objective-C files.")
+      opt[Boolean]("objc-export-symbols").valueName("<true/false>").foreach(x => objcExportSymbols = x)
+        .text("Export objcpp symbols from dynamic shared object (default: false).")
       opt[String]("objc-swift-bridging-header").valueName("<name>").foreach(x => objcSwiftBridgingHeaderName = Some(x))
         .text("The name of Objective-C Bridging Header used in XCode's Swift projects.")
       opt[Boolean]("objc-closed-enums").valueName("<true/false>").foreach(x => objcClosedEnums = x)
@@ -366,6 +369,7 @@ object Main {
       objcppExt,
       objcHeaderExt,
       objcIncludePrefix,
+      objcExportSymbols,
       objcExtendedRecordIncludePrefix,
       objcppIncludePrefix,
       objcppIncludeCppPrefix,

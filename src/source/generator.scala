@@ -73,6 +73,7 @@ package object generatorTools {
                    objcppExt: String,
                    objcHeaderExt: String,
                    objcIncludePrefix: String,
+                   objcExportSymbols: Boolean,
                    objcExtendedRecordIncludePrefix: String,
                    objcppIncludePrefix: String,
                    objcppIncludeCppPrefix: String,
